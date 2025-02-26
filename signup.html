@@ -80,7 +80,8 @@
     document.getElementById("registerFingerprint").addEventListener("click", async () => {
       try {
         // Replace with your ESP32 device IP address if needed.
-        const response = await fetch("http://192.168.94.242/enroll", { method: "POST" });
+       const response = await fetch("/enroll", { method: "POST" });
+
         const data = await response.json();
         if (data.success) {
           fingerprintId = data.fingerprintId;
