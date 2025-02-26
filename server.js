@@ -6,13 +6,11 @@ const path = require('path');
 const app = express();
 const port = 3000;
 
-// Serve index.html when the root URL is accessed
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
 app.use(express.json());
 app.use(cors());
+
+// Serve static files from the current directory so that login.html, signup.html, etc. can be served.
+app.use(express.static(__dirname));
 
 // Middleware to trim whitespace/newline characters from req.url
 app.use((req, res, next) => {
@@ -22,7 +20,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// ... rest of your server code
+// Serve index.html when the root URL is accessed
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // Connect to MongoDB Atlas using connection string from environment variable
 const mongoURI = process.env.MONGO_URI || 'mongodb+srv://smartattendance302:smartattendance%402025@cluster1.s8aq1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1';
