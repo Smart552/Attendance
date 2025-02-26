@@ -2,26 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const PDFDocument = require('pdfkit');
+const path = require('path');
 const app = express();
 const port = 3000;
-
-const path = require('path');
-
-// Serve index.html when the root URL is accessed
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.use(express.json());
-app.use(cors());
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const PDFDocument = require('pdfkit');
-const app = express();
-const port = 3000;
-
-const path = require('path');
 
 // Serve index.html when the root URL is accessed
 app.get('/', (req, res) => {
@@ -38,6 +21,8 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// ... rest of your server code
 
 // Connect to MongoDB Atlas using connection string from environment variable
 const mongoURI = process.env.MONGO_URI || 'mongodb+srv://smartattendance302:smartattendance%402025@cluster1.s8aq1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1';
