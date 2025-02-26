@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Smart Attendance System</title>
+  
+</head>
+<body>
+  <h1>Login</h1>
+  <form id="loginForm">
+    <!-- Role Selection -->
+    <label for="role">Select Role:</label>
+    <select name="role" id="role" required>
+      <option value="">--Select Role--</option>
+      <option value="student">Student</option>
+      <option value="teacher">Teacher</option>
+    </select><br>
+
+    <!-- Student Login Fields -->
+    <div id="studentLoginFields" style="display:none;">
+      <label for="rollNo">Roll No:</label>
+      <input type="text" name="rollNo" id="rollNo"><br>
+    </div>
+
+    <!-- Teacher Login Fields -->
+    <div id="teacherLoginFields" style="display:none;">
+      <label for="name">Name:</label>
+      <input type="text" name="name" id="name"><br>
+    </div>
+
+    <!-- Common Password Field -->
+    <label for="password">Password:</label>
+    <input type="password" name="password" id="password" required><br>
+    <button type="submit">Login</button>
+  </form>
+
+  <script>
+    // Handle role-based field display for login
+    const roleSelect = document.getElementById("role");
+    const studentLoginFields = document.getElementById("studentLoginFields");
+    const teacherLoginFields = document.getElementById("teacherLoginFields");
+
+    roleSelect.addEventListener("change", () => {
+      const role = roleSelect.value;
+      if (role === "student") {
+        studentLoginFields.style.display = "block";
+        teacherLoginFields.style.display = "none";
+      } else if (role === "teacher") {
+        teacherLoginFields.style.display = "block";
+        studentLoginFields.style.display = "none";
+      } else {
+        studentLoginFields.style.display = "none";
+        teacherLoginFields.style.display = "none";
+      }
+    });
+
+    // Login form submission with localStorage handling
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const role = roleSelect.value;
+      if (!role) {
+        alert("Please select a role.");
+        return;
+      }
+      let username;
+      const password = document.getElementById("password").value;
+
+      if (role === "student") {
+        username = document.getElementById("rollNo").value;
+        if (!username) {
+          alert("Please enter your Roll No.");
+          return;
+        }
+      } else if (role === "teacher") {
+        username = document.getElementById("name").value;
+        if (!username) {
+          alert("Please enter your Name.");
+          return;
+        }
+      }
+
+      try {
+        const response = await fetch("http://localhost:3000/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password, role })
+        });
+        const result = await response.json();
+        if (response.ok) {
+          // Store the logged-in user data in localStorage
+          localStorage.setItem("currentUser", JSON.stringify(result.user));
+          alert("Login successful!");
+          window.location.href = "dashboard.html";
+        } else {
+          alert("Login failed: " + result.message);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error during login.");
+      }
+    });
+  </script>
+</body>
+</html>

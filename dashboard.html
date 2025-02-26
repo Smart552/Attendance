@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Smart Attendance System</title>
+  <!-- Include Chart.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #controls { margin-bottom: 20px; }
+    label { margin-right: 10px; }
+    select { margin-right: 20px; }
+    canvas { max-width: 600px; max-height: 300px; }
+    /* Teacher-specific styles */
+    #teacherElements { display: none; }
+    #teacherMetrics, #studentTableSection { margin-top: 20px; }
+    #studentTableSection table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    #studentTableSection th, #studentTableSection td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    /* Student-specific styles */
+    #studentElements { display: none; }
+    #studentMetrics { margin-top: 20px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div id="dashboard">
+    <h1>Welcome, <span id="userName"></span></h1>
+    <div id="controls">
+      <label for="subjectSelect">Select Subject:</label>
+      <select id="subjectSelect"></select>
+      <label for="periodSelect">Select Period:</label>
+      <select id="periodSelect">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
+    <canvas id="attendanceChart"></canvas>
+    
+    <!-- Teacher-specific elements -->
+    <div id="teacherElements">
+      <div id="teacherMetrics">
+        <p>Total Students: <span id="totalStudents"></span></p>
+        <p>Total Lectures: <span id="totalLecturesTeacher"></span></p>
+        <p>Present Students: <span id="presentStudents"></span></p>
+        <p>Average Students Present: <span id="averageStudentsPresent"></span>%</p>
+      </div>
+      <div id="studentTableSection">
+        <h2>Student Attendance</h2>
+        <table id="studentTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Roll No</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Student-specific elements -->
+    <div id="studentElements">
+      <div id="studentMetrics">
+        <p>Total Lectures: <span id="totalLecturesStudent"></span></p>
+        <p>Total Attended: <span id="totalAttended"></span></p>
+        <p>Average Attendance: <span id="averageAttendance"></span>%</p>
+      </div>
+    </div>
+  </div>
+  <br/>
+  <button id="downloadPdf">Download Attendance PDF</button>
+  
+  <script>
+    // Retrieve the logged-in user from localStorage.
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+      alert("No user logged in");
+      window.location.href = "login.html";
+    }
+    document.getElementById("userName").textContent = currentUser.name;
+    
+    // Show/hide elements based on user role.
+    if (currentUser.role === "teacher") {
+      document.getElementById("teacherElements").style.display = "block";
+      document.getElementById("downloadPdf").style.display = "block";
+    } else if (currentUser.role === "student") {
+      document.getElementById("studentElements").style.display = "block";
+      document.getElementById("downloadPdf").style.display = "none";
+    }
+    
+    // Populate the subject dropdown.
+    const subjectSelect = document.getElementById("subjectSelect");
+    function populateSubjects() {
+      subjectSelect.innerHTML = "";
+      if (currentUser.role === "teacher") {
+        const option = document.createElement("option");
+        option.value = currentUser.subject;
+        option.text = currentUser.subject;
+        subjectSelect.appendChild(option);
+      } else {
+        const subjects = ["Math", "Science", "History", "English"];
+        subjects.forEach(sub => {
+          const option = document.createElement("option");
+          option.value = sub;
+          option.text = sub;
+          subjectSelect.appendChild(option);
+        });
+      }
+    }
+    
+    // --------------- Teacher Dashboard Update ---------------
+    async function updateTeacherDashboard() {
+      const period = document.getElementById("periodSelect").value;
+      
+      // Fetch total lectures from backend.
+      const lecturesResponse = await fetch(`http://localhost:3000/teacher-sessions/${currentUser._id}?period=${period}`);
+      const lecturesData = await lecturesResponse.json();
+      const totalLectures = lecturesData.totalLectures;
+      
+      // Fetch student attendance data.
+      const studentsResponse = await fetch(`http://localhost:3000/student-attendance?subject=${currentUser.subject}&period=${period}`);
+      const studentsData = await studentsResponse.json();
+      
+      const totalStudents = studentsData.length;
+      const presentStudents = studentsData.filter(student => student.attendance === "present").length;
+      const averageStudentsPresent = totalStudents ? ((presentStudents / totalStudents) * 100).toFixed(2) : 0;
+      
+      document.getElementById("totalStudents").textContent = totalStudents;
+      document.getElementById("totalLecturesTeacher").textContent = totalLectures;
+      document.getElementById("presentStudents").textContent = presentStudents;
+      document.getElementById("averageStudentsPresent").textContent = averageStudentsPresent;
+      
+      const tbody = document.querySelector("#studentTable tbody");
+      tbody.innerHTML = "";
+      studentsData.forEach(student => {
+        const row = document.createElement("tr");
+        const nameCell = document.createElement("td");
+        nameCell.textContent = student.name;
+        const rollCell = document.createElement("td");
+        rollCell.textContent = student.username;
+        const statusCell = document.createElement("td");
+        statusCell.textContent = student.attendance;
+        row.appendChild(nameCell);
+        row.appendChild(rollCell);
+        row.appendChild(statusCell);
+        tbody.appendChild(row);
+      });
+      
+      const ctx = document.getElementById("attendanceChart").getContext("2d");
+      if (window.attendanceChart && typeof window.attendanceChart.destroy === "function") {
+        window.attendanceChart.destroy();
+      } else {
+        window.attendanceChart = null;
+      }
+      window.attendanceChart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: ["Present", "Absent"],
+          datasets: [{
+            data: [presentStudents, totalStudents - presentStudents],
+            backgroundColor: ["rgba(75, 192, 192, 0.6)", "rgba(192, 75, 75, 0.6)"]
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+    
+    // --------------- Student Dashboard Update ---------------
+    async function updateStudentDashboard() {
+      const period = document.getElementById("periodSelect").value;
+      
+      const response = await fetch(`http://localhost:3000/student-attendance/${currentUser._id}?period=${period}`);
+      const attendanceData = await response.json();
+      const totalLectures = attendanceData.totalLectures;
+      const attendedLectures = attendanceData.attendedLectures;
+      const avgAttendance = totalLectures > 0 ? ((attendedLectures / totalLectures) * 100).toFixed(2) : 0;
+      
+      document.getElementById("totalLecturesStudent").textContent = totalLectures;
+      document.getElementById("totalAttended").textContent = attendedLectures;
+      document.getElementById("averageAttendance").textContent = avgAttendance;
+      
+      const ctx = document.getElementById("attendanceChart").getContext("2d");
+      if (window.attendanceChart && typeof window.attendanceChart.destroy === "function") {
+        window.attendanceChart.destroy();
+      } else {
+        window.attendanceChart = null;
+      }
+      window.attendanceChart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: ["Attended", "Missed"],
+          datasets: [{
+            data: [attendedLectures, totalLectures - attendedLectures],
+            backgroundColor: ["rgba(75, 192, 192, 0.6)", "rgba(192, 75, 75, 0.6)"]
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+    
+    function updateDashboard() {
+      if (currentUser.role === "teacher") {
+        updateTeacherDashboard();
+      } else if (currentUser.role === "student") {
+        updateStudentDashboard();
+      }
+    }
+    
+    // Poll the dashboard every 5 seconds for real-time updates
+    function pollDashboard() {
+      updateDashboard();
+      setTimeout(pollDashboard, 5000);
+    }
+    
+    subjectSelect.addEventListener("change", updateDashboard);
+    document.getElementById("periodSelect").addEventListener("change", updateDashboard);
+    
+    populateSubjects();
+    updateDashboard();
+    pollDashboard(); // Start polling
+    
+    document.getElementById("downloadPdf").addEventListener("click", () => {
+      const period = document.getElementById("periodSelect").value;
+      if (currentUser.role === "teacher") {
+        window.location.href = `http://localhost:3000/download-pdf/${currentUser._id}?period=${period}`;
+      } else if (currentUser.role === "student") {
+        window.location.href = `http://localhost:3000/download-pdf/student/${currentUser._id}?period=${period}`;
+      }
+    });
+  </script>
+</body>
+</html>
