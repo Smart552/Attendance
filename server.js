@@ -146,7 +146,7 @@ app.post('/scan', async (req, res) => {
         user.sessionStart = new Date();
         user.activeSessionId = new mongoose.Types.ObjectId();
         await user.save();
-        return res.json({ message: `Attendance session started. Subject: ${user.subject}`, subject: user.subject });
+        return res.json({ message: Attendance session started. Subject: ${user.subject}, subject: user.subject });
       } else {
         // End session: record session data.
         const sessionStart = user.sessionStart;
@@ -179,7 +179,7 @@ app.post('/scan', async (req, res) => {
         });
         const savedRecord = await attendanceRecord.save();
         console.log("Saved attendance record:", savedRecord);
-        return res.json({ message: `Attendance updated for student. Roll No: ${user.username}`, user });
+        return res.json({ message: Attendance updated for student. Roll No: ${user.username}, user });
       } else {
         return res.status(403).json({ message: "Attendance session not open. Please wait for a teacher to start a session." });
       }
@@ -310,14 +310,14 @@ app.get('/download-pdf/:teacherId', async (req, res) => {
     doc.moveDown();
     doc.fontSize(16).text("Subject: " + teacher.subject, { align: 'center' });
     doc.moveDown();
-    doc.fontSize(16).text(`Period: ${period.charAt(0).toUpperCase() + period.slice(1)}`, { align: 'center' });
+    doc.fontSize(16).text(Period: ${period.charAt(0).toUpperCase() + period.slice(1)}, { align: 'center' });
     doc.moveDown();
     
     // Student data section
     doc.fontSize(20).text("Student Attendance:", { underline: true });
     doc.moveDown(0.5);
     students.forEach((student) => {
-      doc.fontSize(14).text(`Name: ${student.name} | Roll No: ${student.username} | Status: ${student.attendance}`);
+      doc.fontSize(14).text(Name: ${student.name} | Roll No: ${student.username} | Status: ${student.attendance});
     });
     
     doc.end();
@@ -350,7 +350,7 @@ app.get('/download-pdf/student/:studentId', async (req, res) => {
     doc.moveDown();
     doc.fontSize(18).text("Student: " + student.name, { align: 'center' });
     doc.moveDown();
-    doc.fontSize(16).text(`Period: ${period.charAt(0).toUpperCase() + period.slice(1)}`, { align: 'center' });
+    doc.fontSize(16).text(Period: ${period.charAt(0).toUpperCase() + period.slice(1)}, { align: 'center' });
     doc.end();
     
     // Reset the individual student's attendance after download.
@@ -455,5 +455,5 @@ app.get('/update-attendance', async (req, res) => {
 
 // Listen on all interfaces
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on port ${port} and listening on all interfaces`);
+  console.log(Server running on port ${port} and listening on all interfaces);
 });
