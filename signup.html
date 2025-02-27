@@ -79,15 +79,12 @@
     // Fingerprint registration for both roles
     document.getElementById("registerFingerprint").addEventListener("click", async () => {
       try {
-        // Replace with your ESP32 device IP address if needed.
-       const response = await fetch("http://192.168.94.242/enroll", { method: "POST" });
-
-
+        // Use a relative URL so the request is sent over HTTPS
+        const response = await fetch("/enroll", { method: "POST" });
         const data = await response.json();
         if (data.success) {
           fingerprintId = data.fingerprintId;
           document.getElementById("fingerprintId").value = fingerprintId;
-          // Successful fingerprint registration can also be shown on the LCD by the ESP32.
           alert("Fingerprint registered successfully: " + fingerprintId);
         } else {
           alert("Fingerprint registration failed: " + data.message);
@@ -142,7 +139,8 @@
       }
       
       try {
-        const response = await fetch("http://localhost:3000/signup", {
+        // Use a relative URL for the signup endpoint
+        const response = await fetch("/signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(formData)
