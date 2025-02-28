@@ -346,7 +346,7 @@ app.post('/proxy/enroll', async (req, res) => {
   
   const role = req.query.role || "";
   // Use your new ngrok URL that points to your local proxy server
-  const espEnrollUrl = `https://e202-2401-4900-79df-f789-8c16-e1cf-5a4a-d1e2.ngrok-free.app/enroll?role=${role}`;
+  const espEnrollUrl = `https://myespserver.loca.lt/enroll?role=${role}`;
   try {
     const response = await fetch(espEnrollUrl, { method: "POST" });
     const data = await response.json();
