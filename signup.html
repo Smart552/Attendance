@@ -76,10 +76,9 @@
 
     let fingerprintId = null;
 
-    // Fingerprint registration for both roles
+    // Fingerprint registration for both roles using relative URL
     document.getElementById("registerFingerprint").addEventListener("click", async () => {
       try {
-        // Use a relative URL so the request is sent over HTTPS
         const response = await fetch("/enroll", { method: "POST" });
         const data = await response.json();
         if (data.success) {
@@ -95,7 +94,7 @@
       }
     });
 
-    // Signup form submission
+    // Signup form submission using relative URL
     document.getElementById("signupForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const role = roleSelect.value;
@@ -139,7 +138,6 @@
       }
       
       try {
-        // Use a relative URL for the signup endpoint
         const response = await fetch("/signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
