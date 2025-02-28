@@ -1,3 +1,5 @@
+// server.js
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -9,7 +11,7 @@ const port = 3000;
 app.use(express.json());
 app.use(cors());
 
-// Serve static files from the current directory so that login.html, signup.html, etc. can be served.
+// Serve static files (e.g., login.html, signup.html, index.html) from current directory.
 app.use(express.static(__dirname));
 
 // Middleware to trim whitespace/newline characters from req.url
@@ -20,12 +22,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve index.html when the root URL is accessed
+// Serve index.html at the root URL
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Connect to MongoDB Atlas using connection string from environment variable
+// Connect to MongoDB Atlas using environment variable MONGO_URI
 const mongoURI = process.env.MONGO_URI || 'mongodb+srv://smartattendance302:smartattendance%402025@cluster1.s8aq1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1';
 mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("Connected to MongoDB Atlas"))
@@ -35,7 +37,6 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
    Schema Definitions
 ===================== */
 
-// User Schema
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true }, // For students: roll no; for teachers: a unique identifier (name)
   name: { type: String, required: true },
@@ -47,11 +48,10 @@ const userSchema = new mongoose.Schema({
   lastUpdated: { type: Date },
   attendanceSessionOpen: { type: Boolean, default: false },
   sessionStart: { type: Date },
-  activeSessionId: { type: mongoose.Schema.Types.ObjectId } // To store current session id
+  activeSessionId: { type: mongoose.Schema.Types.ObjectId }
 });
 const User = mongoose.model('User', userSchema);
 
-// Session Schema – records a teacher’s complete session (from start to end)
 const sessionSchema = new mongoose.Schema({
   teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   sessionStart: { type: Date, required: true },
@@ -59,7 +59,6 @@ const sessionSchema = new mongoose.Schema({
 });
 const Session = mongoose.model('Session', sessionSchema);
 
-// Attendance Record Schema – logs each student’s attendance for a session
 const attendanceRecordSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', required: true },
@@ -71,8 +70,7 @@ const AttendanceRecord = mongoose.model('AttendanceRecord', attendanceRecordSche
    Global Variables
 ===================== */
 
-// Global counter for unique fingerprint IDs (if needed for enrollment)
-let nextFingerprintId = 1;
+let nextFingerprintId = 1;  // For simulated enrollment
 
 /* =====================
    Endpoints
@@ -130,17 +128,12 @@ app.post('/scan', async (req, res) => {
     }
     
     if (user.role === "teacher") {
-      // Check if any teacher's session is active.
       const activeTeacher = await User.findOne({ role: "teacher", attendanceSessionOpen: true });
-      
-      // If a session is active and it does not belong to this teacher, reject the scan.
       if (activeTeacher && activeTeacher._id.toString() !== user._id.toString()) {
         return res.status(403).json({ message: "Another teacher's session is active. You cannot start or end a session." });
       }
       
-      // If no session is active for this teacher, then start one.
       if (!user.attendanceSessionOpen) {
-        // Reset all student attendance to "absent" at the start of a new session.
         await User.updateMany({ role: "student" }, { attendance: "absent" });
         user.attendanceSessionOpen = true;
         user.sessionStart = new Date();
@@ -148,7 +141,6 @@ app.post('/scan', async (req, res) => {
         await user.save();
         return res.json({ message: `Attendance session started. Subject: ${user.subject}`, subject: user.subject });
       } else {
-        // End session: record session data.
         const sessionStart = user.sessionStart;
         const sessionEnd = new Date();
         const session = new Session({
@@ -165,7 +157,6 @@ app.post('/scan', async (req, res) => {
       }
       
     } else if (user.role === "student") {
-      // Student scan: record attendance only if a teacher's session is active.
       const activeTeacher = await User.findOne({ role: "teacher", attendanceSessionOpen: true });
       if (activeTeacher && activeTeacher.activeSessionId) {
         user.attendance = "present";
@@ -189,7 +180,7 @@ app.post('/scan', async (req, res) => {
   }
 });
 
-// Endpoint: Get teacher sessions count (i.e., total complete sessions)
+// Teacher sessions count endpoint
 app.get('/teacher-sessions/:teacherId', async (req, res) => {
   const { teacherId } = req.params;
   const period = req.query.period || "daily";
@@ -216,7 +207,7 @@ app.get('/teacher-sessions/:teacherId', async (req, res) => {
   }
 });
 
-// Endpoint: Get student attendance data for teacher view (all students for a subject)
+// Student attendance (all students) endpoint
 app.get('/student-attendance', async (req, res) => {
   const { subject, period } = req.query;
   const now = new Date();
@@ -245,7 +236,7 @@ app.get('/student-attendance', async (req, res) => {
   }
 });
 
-// Endpoint: Get student attendance data for individual student view
+// Student attendance (individual) endpoint
 app.get('/student-attendance/:studentId', async (req, res) => {
   const { studentId } = req.params;
   const period = req.query.period || "daily";
@@ -284,7 +275,7 @@ app.post('/enroll', async (req, res) => {
   res.status(200).json({ success: true, fingerprintId: id });
 });
 
-// PDF Download endpoint for teacher (updated to include student data)
+// PDF Download endpoint for teacher (includes student data)
 app.get('/download-pdf/:teacherId', async (req, res) => {
   try {
     const teacherId = req.params.teacherId;
@@ -294,7 +285,6 @@ app.get('/download-pdf/:teacherId', async (req, res) => {
       return res.status(404).json({ message: "Teacher not found." });
     }
     
-    // Query all students (optionally, you could filter by subject or session)
     const students = await User.find({ role: "student" }).sort({ username: 1 });
     
     const doc = new PDFDocument();
@@ -322,7 +312,6 @@ app.get('/download-pdf/:teacherId', async (req, res) => {
     
     doc.end();
     
-    // After sending the PDF, reset attendance for all students marked "present".
     User.updateMany({ role: "student", attendance: "present" }, { attendance: "absent" })
       .then(() => console.log("Student attendance reset to absent after download"))
       .catch(err => console.error("Error resetting student attendance:", err));
@@ -353,7 +342,6 @@ app.get('/download-pdf/student/:studentId', async (req, res) => {
     doc.fontSize(16).text(`Period: ${period.charAt(0).toUpperCase() + period.slice(1)}`, { align: 'center' });
     doc.end();
     
-    // Reset the individual student's attendance after download.
     student.attendance = "absent";
     student.lastUpdated = new Date();
     student.save().then(() => console.log("Student attendance reset to absent after download"))
@@ -377,7 +365,7 @@ app.get('/users', async (req, res) => {
 // NEW endpoint: Return teacher subject based on fingerprintId.
 app.get('/get-teacher-subject', async (req, res) => {
   let { fingerprintId } = req.query;
-  fingerprintId = fingerprintId.toString(); // Ensure string type
+  fingerprintId = fingerprintId.toString();
   const teacher = await User.findOne({ fingerprintId, role: "teacher" });
   if (!teacher) {
     return res.status(404).json({ message: "Teacher not found" });
@@ -388,7 +376,7 @@ app.get('/get-teacher-subject', async (req, res) => {
 // NEW endpoint: Return student details based on fingerprintId.
 app.get('/get-student-details', async (req, res) => {
   let { fingerprintId } = req.query;
-  fingerprintId = fingerprintId.toString(); // Ensure string type
+  fingerprintId = fingerprintId.toString();
   const student = await User.findOne({ fingerprintId, role: "student" });
   if (!student) {
     return res.status(404).json({ message: "Student not found" });
@@ -399,7 +387,7 @@ app.get('/get-student-details', async (req, res) => {
 // NEW endpoint: Return user details based on fingerprintId.
 app.get('/get-user', async (req, res) => {
   let { fingerprintId } = req.query;
-  fingerprintId = fingerprintId.toString(); // Ensure string type
+  fingerprintId = fingerprintId.toString();
   try {
     const user = await User.findOne({ fingerprintId });
     if (!user) {
@@ -414,7 +402,7 @@ app.get('/get-user', async (req, res) => {
 // NEW endpoint: Update teacher session state based on fingerprintId.
 app.get('/update-session', async (req, res) => {
   let { fingerprintId, active } = req.query;
-  fingerprintId = fingerprintId.toString(); // Ensure string type
+  fingerprintId = fingerprintId.toString();
   try {
     const teacher = await User.findOne({ fingerprintId, role: "teacher" });
     if (!teacher) {
@@ -438,7 +426,7 @@ app.get('/update-session', async (req, res) => {
 // NEW endpoint: Update student attendance based on fingerprintId.
 app.get('/update-attendance', async (req, res) => {
   let { fingerprintId } = req.query;
-  fingerprintId = fingerprintId.toString(); // Ensure string type
+  fingerprintId = fingerprintId.toString();
   try {
     const student = await User.findOne({ fingerprintId, role: "student" });
     if (!student) {
