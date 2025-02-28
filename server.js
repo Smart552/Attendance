@@ -360,10 +360,10 @@ app.post('/proxy/enroll', async (req, res) => {
    Serve Static index.html
 ===================== */
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'signup.html'));
 });
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'signup.html'));
 });
 
 /* =====================
