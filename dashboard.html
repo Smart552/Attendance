@@ -1,10 +1,10 @@
+<!-- dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Smart Attendance System</title>
-  <!-- Include Chart.js from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
@@ -12,7 +12,6 @@
     label { margin-right: 10px; }
     select { margin-right: 20px; }
     canvas { max-width: 600px; max-height: 300px; }
-    /* Teacher-specific styles */
     #teacherElements { display: none; }
     #teacherMetrics, #studentTableSection { margin-top: 20px; }
     #studentTableSection table {
@@ -25,7 +24,6 @@
       padding: 8px;
       text-align: left;
     }
-    /* Student-specific styles */
     #studentElements { display: none; }
     #studentMetrics { margin-top: 20px; font-size: 16px; }
   </style>
@@ -45,7 +43,6 @@
     </div>
     <canvas id="attendanceChart"></canvas>
     
-    <!-- Teacher-specific elements -->
     <div id="teacherElements">
       <div id="teacherMetrics">
         <p>Total Students: <span id="totalStudents"></span></p>
@@ -68,7 +65,6 @@
       </div>
     </div>
     
-    <!-- Student-specific elements -->
     <div id="studentElements">
       <div id="studentMetrics">
         <p>Total Lectures: <span id="totalLecturesStudent"></span></p>
@@ -81,7 +77,6 @@
   <button id="downloadPdf">Download Attendance PDF</button>
   
   <script>
-    // Retrieve the logged-in user from localStorage.
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     if (!currentUser) {
       alert("No user logged in");
@@ -89,7 +84,6 @@
     }
     document.getElementById("userName").textContent = currentUser.name;
     
-    // Show/hide elements based on user role.
     if (currentUser.role === "teacher") {
       document.getElementById("teacherElements").style.display = "block";
       document.getElementById("downloadPdf").style.display = "block";
@@ -98,7 +92,6 @@
       document.getElementById("downloadPdf").style.display = "none";
     }
     
-    // Populate the subject dropdown.
     const subjectSelect = document.getElementById("subjectSelect");
     function populateSubjects() {
       subjectSelect.innerHTML = "";
@@ -118,17 +111,14 @@
       }
     }
     
-    // --------------- Teacher Dashboard Update ---------------
     async function updateTeacherDashboard() {
       const period = document.getElementById("periodSelect").value;
       
-      // Fetch total lectures from backend.
-      const lecturesResponse = await fetch(`http://localhost:3000/teacher-sessions/${currentUser._id}?period=${period}`);
+      const lecturesResponse = await fetch(`/teacher-sessions/${currentUser._id}?period=${period}`);
       const lecturesData = await lecturesResponse.json();
       const totalLectures = lecturesData.totalLectures;
       
-      // Fetch student attendance data.
-      const studentsResponse = await fetch(`http://localhost:3000/student-attendance?subject=${currentUser.subject}&period=${period}`);
+      const studentsResponse = await fetch(`/student-attendance?subject=${currentUser.subject}&period=${period}`);
       const studentsData = await studentsResponse.json();
       
       const totalStudents = studentsData.length;
@@ -159,8 +149,6 @@
       const ctx = document.getElementById("attendanceChart").getContext("2d");
       if (window.attendanceChart && typeof window.attendanceChart.destroy === "function") {
         window.attendanceChart.destroy();
-      } else {
-        window.attendanceChart = null;
       }
       window.attendanceChart = new Chart(ctx, {
         type: "pie",
@@ -175,11 +163,10 @@
       });
     }
     
-    // --------------- Student Dashboard Update ---------------
     async function updateStudentDashboard() {
       const period = document.getElementById("periodSelect").value;
       
-      const response = await fetch(`http://localhost:3000/student-attendance/${currentUser._id}?period=${period}`);
+      const response = await fetch(`/student-attendance/${currentUser._id}?period=${period}`);
       const attendanceData = await response.json();
       const totalLectures = attendanceData.totalLectures;
       const attendedLectures = attendanceData.attendedLectures;
@@ -192,8 +179,6 @@
       const ctx = document.getElementById("attendanceChart").getContext("2d");
       if (window.attendanceChart && typeof window.attendanceChart.destroy === "function") {
         window.attendanceChart.destroy();
-      } else {
-        window.attendanceChart = null;
       }
       window.attendanceChart = new Chart(ctx, {
         type: "pie",
@@ -216,7 +201,6 @@
       }
     }
     
-    // Poll the dashboard every 5 seconds for real-time updates
     function pollDashboard() {
       updateDashboard();
       setTimeout(pollDashboard, 5000);
@@ -227,14 +211,14 @@
     
     populateSubjects();
     updateDashboard();
-    pollDashboard(); // Start polling
+    pollDashboard();
     
     document.getElementById("downloadPdf").addEventListener("click", () => {
       const period = document.getElementById("periodSelect").value;
       if (currentUser.role === "teacher") {
-        window.location.href = `http://localhost:3000/download-pdf/${currentUser._id}?period=${period}`;
+        window.location.href = `/download-pdf/${currentUser._id}?period=${period}`;
       } else if (currentUser.role === "student") {
-        window.location.href = `http://localhost:3000/download-pdf/student/${currentUser._id}?period=${period}`;
+        window.location.href = `/download-pdf/student/${currentUser._id}?period=${period}`;
       }
     });
   </script>
