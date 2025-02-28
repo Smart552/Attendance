@@ -1,18 +1,12 @@
-// server.js
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const PDFDocument = require('pdfkit');
-const path = require('path');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000; // Use Render's PORT environment variable
 
 app.use(express.json());
 app.use(cors());
-
-// Serve static files (e.g., login.html, signup.html, index.html) from current directory.
-app.use(express.static(__dirname));
 
 // Middleware to trim whitespace/newline characters from req.url
 app.use((req, res, next) => {
@@ -22,13 +16,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve index.html at the root URL
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Connect to MongoDB Atlas using environment variable MONGO_URI
-const mongoURI = process.env.MONGO_URI || 'mongodb+srv://smartattendance302:smartattendance%402025@cluster1.s8aq1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster1';
+// Connect to MongoDB Atlas using connection string from environment variable
+const mongoURI = process.env.MONGO_URI; // set this variable in Render dashboard
+if (!mongoURI) {
+  console.error("MongoDB URI not provided in environment variables");
+  process.exit(1);
+}
 mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("Connected to MongoDB Atlas"))
   .catch(err => console.error("MongoDB connection error:", err));
@@ -37,13 +30,14 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
    Schema Definitions
 ===================== */
 
+// User Schema
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true }, // For students: roll no; for teachers: a unique identifier (name)
+  username: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['teacher', 'student'], default: 'student' },
   fingerprintId: { type: String, required: true },
-  subject: { type: String },  // Teacher’s subject
+  subject: { type: String },
   attendance: { type: String, default: 'absent' },
   lastUpdated: { type: Date },
   attendanceSessionOpen: { type: Boolean, default: false },
@@ -52,6 +46,7 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
+// Session Schema
 const sessionSchema = new mongoose.Schema({
   teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   sessionStart: { type: Date, required: true },
@@ -59,6 +54,7 @@ const sessionSchema = new mongoose.Schema({
 });
 const Session = mongoose.model('Session', sessionSchema);
 
+// Attendance Record Schema
 const attendanceRecordSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', required: true },
@@ -69,8 +65,7 @@ const AttendanceRecord = mongoose.model('AttendanceRecord', attendanceRecordSche
 /* =====================
    Global Variables
 ===================== */
-
-let nextFingerprintId = 1;  // For simulated enrollment
+let nextFingerprintId = 1;
 
 /* =====================
    Endpoints
@@ -129,6 +124,7 @@ app.post('/scan', async (req, res) => {
     
     if (user.role === "teacher") {
       const activeTeacher = await User.findOne({ role: "teacher", attendanceSessionOpen: true });
+      
       if (activeTeacher && activeTeacher._id.toString() !== user._id.toString()) {
         return res.status(403).json({ message: "Another teacher's session is active. You cannot start or end a session." });
       }
@@ -161,15 +157,13 @@ app.post('/scan', async (req, res) => {
       if (activeTeacher && activeTeacher.activeSessionId) {
         user.attendance = "present";
         user.lastUpdated = new Date();
-        const updatedUser = await user.save();
-        console.log("Updated student record:", updatedUser);
+        await user.save();
         const attendanceRecord = new AttendanceRecord({
           studentId: user._id,
           sessionId: activeTeacher.activeSessionId,
           attended: true
         });
-        const savedRecord = await attendanceRecord.save();
-        console.log("Saved attendance record:", savedRecord);
+        await attendanceRecord.save();
         return res.json({ message: `Attendance updated for student. Roll No: ${user.username}`, user });
       } else {
         return res.status(403).json({ message: "Attendance session not open. Please wait for a teacher to start a session." });
@@ -180,7 +174,7 @@ app.post('/scan', async (req, res) => {
   }
 });
 
-// Teacher sessions count endpoint
+// Endpoint: Get teacher sessions count
 app.get('/teacher-sessions/:teacherId', async (req, res) => {
   const { teacherId } = req.params;
   const period = req.query.period || "daily";
@@ -207,7 +201,7 @@ app.get('/teacher-sessions/:teacherId', async (req, res) => {
   }
 });
 
-// Student attendance (all students) endpoint
+// Endpoint: Get student attendance data for teacher view
 app.get('/student-attendance', async (req, res) => {
   const { subject, period } = req.query;
   const now = new Date();
@@ -236,7 +230,7 @@ app.get('/student-attendance', async (req, res) => {
   }
 });
 
-// Student attendance (individual) endpoint
+// Endpoint: Get student attendance data for individual student view
 app.get('/student-attendance/:studentId', async (req, res) => {
   const { studentId } = req.params;
   const period = req.query.period || "daily";
@@ -275,7 +269,7 @@ app.post('/enroll', async (req, res) => {
   res.status(200).json({ success: true, fingerprintId: id });
 });
 
-// PDF Download endpoint for teacher (includes student data)
+// PDF Download endpoint for teacher
 app.get('/download-pdf/:teacherId', async (req, res) => {
   try {
     const teacherId = req.params.teacherId;
@@ -286,14 +280,12 @@ app.get('/download-pdf/:teacherId', async (req, res) => {
     }
     
     const students = await User.find({ role: "student" }).sort({ username: 1 });
-    
     const doc = new PDFDocument();
     const filename = encodeURIComponent(teacher.name + "_attendance.pdf");
     res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
     res.setHeader('Content-type', 'application/pdf');
     doc.pipe(res);
     
-    // Header section
     doc.fontSize(25).text("Attendance Report", { align: 'center' });
     doc.moveDown();
     doc.fontSize(18).text("Teacher: " + teacher.name, { align: 'center' });
@@ -303,7 +295,6 @@ app.get('/download-pdf/:teacherId', async (req, res) => {
     doc.fontSize(16).text(`Period: ${period.charAt(0).toUpperCase() + period.slice(1)}`, { align: 'center' });
     doc.moveDown();
     
-    // Student data section
     doc.fontSize(20).text("Student Attendance:", { underline: true });
     doc.moveDown(0.5);
     students.forEach((student) => {
@@ -312,6 +303,7 @@ app.get('/download-pdf/:teacherId', async (req, res) => {
     
     doc.end();
     
+    // Reset attendance after PDF download.
     User.updateMany({ role: "student", attendance: "present" }, { attendance: "absent" })
       .then(() => console.log("Student attendance reset to absent after download"))
       .catch(err => console.error("Error resetting student attendance:", err));
@@ -342,9 +334,11 @@ app.get('/download-pdf/student/:studentId', async (req, res) => {
     doc.fontSize(16).text(`Period: ${period.charAt(0).toUpperCase() + period.slice(1)}`, { align: 'center' });
     doc.end();
     
+    // Reset attendance for the student.
     student.attendance = "absent";
     student.lastUpdated = new Date();
-    student.save().then(() => console.log("Student attendance reset to absent after download"))
+    student.save()
+      .then(() => console.log("Student attendance reset to absent after download"))
       .catch(err => console.error("Error resetting student attendance:", err));
       
   } catch (err) {
@@ -352,7 +346,7 @@ app.get('/download-pdf/student/:studentId', async (req, res) => {
   }
 });
 
-// Optional endpoint: Get all users (for teacher dashboard table)
+// Optional endpoint: Get all users
 app.get('/users', async (req, res) => {
   try {
     const users = await User.find({});
@@ -441,7 +435,6 @@ app.get('/update-attendance', async (req, res) => {
   }
 });
 
-// Listen on all interfaces
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port} and listening on all interfaces`);
 });
