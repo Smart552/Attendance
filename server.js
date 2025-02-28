@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const PDFDocument = require('pdfkit');
 const path = require('path');
+const fetch = require('node-fetch'); // Make sure to install this package
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -38,7 +39,7 @@ const userSchema = new mongoose.Schema({
   lastUpdated: { type: Date },
   attendanceSessionOpen: { type: Boolean, default: false },
   sessionStart: { type: Date },
-  activeSessionId: { type: mongoose.Schema.Types.ObjectId } // To store current session id
+  activeSessionId: { type: mongoose.Schema.Types.ObjectId }
 });
 const User = mongoose.model('User', userSchema);
 
@@ -171,7 +172,7 @@ app.post('/scan', async (req, res) => {
   }
 });
 
-// Get teacher sessions count (total complete sessions)
+// Get teacher sessions count
 app.get('/teacher-sessions/:teacherId', async (req, res) => {
   const { teacherId } = req.params;
   const period = req.query.period || "daily";
@@ -257,103 +258,8 @@ app.get('/student-attendance/:studentId', async (req, res) => {
   }
 });
 
-// Enrollment endpoint – simulates fingerprint enrollment by assigning a unique ID.
-app.post('/enroll', async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  const id = nextFingerprintId;
-  nextFingerprintId++;
-  console.log("Enrolled fingerprint with id:", id);
-  res.status(200).json({ success: true, fingerprintId: id });
-});
+// NEW endpoints for fingerprint-based queries
 
-// PDF Download endpoint for teacher
-app.get('/download-pdf/:teacherId', async (req, res) => {
-  try {
-    const teacherId = req.params.teacherId;
-    const period = req.query.period || "daily";
-    const teacher = await User.findById(teacherId);
-    if (!teacher || teacher.role !== "teacher") {
-      return res.status(404).json({ message: "Teacher not found." });
-    }
-    
-    const students = await User.find({ role: "student" }).sort({ username: 1 });
-    const doc = new PDFDocument();
-    const filename = encodeURIComponent(teacher.name + "_attendance.pdf");
-    res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
-    res.setHeader('Content-type', 'application/pdf');
-    doc.pipe(res);
-    
-    doc.fontSize(25).text("Attendance Report", { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(18).text("Teacher: " + teacher.name, { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(16).text("Subject: " + teacher.subject, { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(16).text(`Period: ${period.charAt(0).toUpperCase() + period.slice(1)}`, { align: 'center' });
-    doc.moveDown();
-    
-    doc.fontSize(20).text("Student Attendance:", { underline: true });
-    doc.moveDown(0.5);
-    students.forEach((student) => {
-      doc.fontSize(14).text(`Name: ${student.name} | Roll No: ${student.username} | Status: ${student.attendance}`);
-    });
-    
-    doc.end();
-    
-    // Reset attendance after PDF download.
-    User.updateMany({ role: "student", attendance: "present" }, { attendance: "absent" })
-      .then(() => console.log("Student attendance reset to absent after download"))
-      .catch(err => console.error("Error resetting student attendance:", err));
-      
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// PDF Download endpoint for student
-app.get('/download-pdf/student/:studentId', async (req, res) => {
-  try {
-    const studentId = req.params.studentId;
-    const period = req.query.period || "daily";
-    const student = await User.findById(studentId);
-    if (!student || student.role !== "student") {
-      return res.status(404).json({ message: "Student not found." });
-    }
-    const doc = new PDFDocument();
-    const filename = encodeURIComponent(student.name + "_attendance.pdf");
-    res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
-    res.setHeader('Content-type', 'application/pdf');
-    doc.pipe(res);
-    doc.fontSize(25).text("Attendance Report", { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(18).text("Student: " + student.name, { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(16).text(`Period: ${period.charAt(0).toUpperCase() + period.slice(1)}`, { align: 'center' });
-    doc.end();
-    
-    // Reset individual student attendance.
-    student.attendance = "absent";
-    student.lastUpdated = new Date();
-    student.save()
-      .then(() => console.log("Student attendance reset to absent after download"))
-      .catch(err => console.error("Error resetting student attendance:", err));
-      
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// Optional endpoint: Get all users (for teacher dashboard)
-app.get('/users', async (req, res) => {
-  try {
-    const users = await User.find({});
-    res.json({ users });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// NEW endpoint: Return teacher subject based on fingerprintId.
 app.get('/get-teacher-subject', async (req, res) => {
   let { fingerprintId } = req.query;
   fingerprintId = fingerprintId.toString();
@@ -364,7 +270,6 @@ app.get('/get-teacher-subject', async (req, res) => {
   res.json({ subject: teacher.subject });
 });
 
-// NEW endpoint: Return student details based on fingerprintId.
 app.get('/get-student-details', async (req, res) => {
   let { fingerprintId } = req.query;
   fingerprintId = fingerprintId.toString();
@@ -375,7 +280,6 @@ app.get('/get-student-details', async (req, res) => {
   res.json({ username: student.username });
 });
 
-// NEW endpoint: Return user details based on fingerprintId.
 app.get('/get-user', async (req, res) => {
   let { fingerprintId } = req.query;
   fingerprintId = fingerprintId.toString();
@@ -390,7 +294,6 @@ app.get('/get-user', async (req, res) => {
   }
 });
 
-// NEW endpoint: Update teacher session state based on fingerprintId.
 app.get('/update-session', async (req, res) => {
   let { fingerprintId, active } = req.query;
   fingerprintId = fingerprintId.toString();
@@ -414,7 +317,6 @@ app.get('/update-session', async (req, res) => {
   }
 });
 
-// NEW endpoint: Update student attendance based on fingerprintId.
 app.get('/update-attendance', async (req, res) => {
   let { fingerprintId } = req.query;
   fingerprintId = fingerprintId.toString();
@@ -433,22 +335,40 @@ app.get('/update-attendance', async (req, res) => {
 });
 
 /* =====================
-   Serve Static index.html
+   Proxy Endpoint for Fingerprint Enrollment
 ===================== */
 
-// When someone visits the root URL, send index.html (located in the same directory)
+// This endpoint is served over HTTPS (by Render) and proxies the request to your ESP.
+// It avoids mixed content errors.
+app.post('/proxy/enroll', async (req, res) => {
+  // Allow CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  
+  const role = req.query.role || "";
+  // Replace with your ESP's IP address.
+  const espEnrollUrl = `http://192.168.63.218/enroll?role=${role}`;
+  try {
+    const response = await fetch(espEnrollUrl, { method: "POST" });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Proxy error: " + err.toString() });
+  }
+});
+
+/* =====================
+   Serve Static index.html
+===================== */
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'signup.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
-
-// Fallback route: for any unmatched route, send index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'signup.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// --------------------
-// Start Server
-// --------------------
+/* =====================
+   Start Server
+===================== */
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port} and listening on all interfaces`);
 });
