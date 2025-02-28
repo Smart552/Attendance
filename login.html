@@ -1,3 +1,4 @@
+<!-- login.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,12 +34,8 @@
     <input type="password" name="password" id="password" required><br>
     <button type="submit">Login</button>
   </form>
-  
-  <!-- Button to redirect to Signup page -->
-  <button id="signupButton">Go to Signup</button>
 
   <script>
-    // Handle role-based field display for login
     const roleSelect = document.getElementById("role");
     const studentLoginFields = document.getElementById("studentLoginFields");
     const teacherLoginFields = document.getElementById("teacherLoginFields");
@@ -57,7 +54,6 @@
       }
     });
 
-    // Login form submission with localStorage handling
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const role = roleSelect.value;
@@ -83,14 +79,13 @@
       }
 
       try {
-        const response = await fetch("http://localhost:3000/login", {
+        const response = await fetch("/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password, role })
         });
         const result = await response.json();
         if (response.ok) {
-          // Store the logged-in user data in localStorage
           localStorage.setItem("currentUser", JSON.stringify(result.user));
           alert("Login successful!");
           window.location.href = "dashboard.html";
@@ -101,11 +96,6 @@
         console.error(err);
         alert("Error during login.");
       }
-    });
-
-    // Redirect to signup page when the button is clicked
-    document.getElementById("signupButton").addEventListener("click", () => {
-      window.location.href = "signup.html";
     });
   </script>
 </body>
