@@ -1,4 +1,3 @@
-<!-- signup.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,6 +48,7 @@
   </form>
 
   <script>
+    // Handle role-based field display
     const roleSelect = document.getElementById("role");
     const studentFields = document.getElementById("studentFields");
     const teacherFields = document.getElementById("teacherFields");
@@ -76,10 +76,17 @@
 
     let fingerprintId = null;
 
+    // Updated enroll function to call the ESP32's enrollment endpoint.
     document.getElementById("registerFingerprint").addEventListener("click", async () => {
       try {
-        // Call the enroll endpoint on your backend.
-        const response = await fetch("/enroll", { method: "POST" });
+        const role = roleSelect.value;
+        if (!role) {
+          alert("Please select a role before registering fingerprint.");
+          return;
+        }
+        // Update the URL with your ESP's IP address and add the role parameter.
+        const enrollUrl = `http://192.168.63.218/enroll?role=${role}`;
+        const response = await fetch(enrollUrl, { method: "POST" });
         const data = await response.json();
         if (data.success) {
           fingerprintId = data.fingerprintId;
@@ -94,6 +101,7 @@
       }
     });
 
+    // Signup form submission
     document.getElementById("signupForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const role = roleSelect.value;
@@ -137,6 +145,7 @@
       }
       
       try {
+        // Assuming your backend is served at the same origin as this page.
         const response = await fetch("/signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
