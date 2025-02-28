@@ -357,7 +357,20 @@ app.post('/proxy/enroll', async (req, res) => {
 });
 
 /* =====================
-   Serve Static index.html
+   NEW Endpoint: Record Enrollment Data from ESP
+===================== */
+app.post('/record-enrollment', async (req, res) => {
+  const { fingerprintId, role } = req.body;
+  if (!fingerprintId || !role) {
+    return res.status(400).json({ success: false, message: "Missing fingerprintId or role" });
+  }
+  console.log("Received enrollment record:", req.body);
+  // Optionally, store the enrollment data or perform further processing here.
+  res.json({ success: true, fingerprintId });
+});
+
+/* =====================
+   Serve Static signup.html
 ===================== */
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'signup.html'));
