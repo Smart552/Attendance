@@ -26,9 +26,17 @@
     }
     #studentElements { display: none; }
     #studentMetrics { margin-top: 20px; font-size: 16px; }
+    #logoutBtn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 8px 16px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
+  <button id="logoutBtn">Logout</button>
   <div id="dashboard">
     <h1>Welcome, <span id="userName"></span></h1>
     <div id="controls">
@@ -77,6 +85,12 @@
   <button id="downloadPdf">Download Attendance PDF</button>
   
   <script>
+    // Logout button: clear localStorage and redirect to login
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("currentUser");
+      window.location.href = "login.html";
+    });
+    
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     if (!currentUser) {
       alert("No user logged in");
