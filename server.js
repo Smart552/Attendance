@@ -438,12 +438,12 @@ app.get('/update-attendance', async (req, res) => {
 
 // When someone visits the root URL, send index.html (located in the same directory)
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'login.html'));
 });
 
 // Fallback route: for any unmatched route, send index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'login.html'));
 });
 
 // --------------------
