@@ -338,15 +338,13 @@ app.get('/update-attendance', async (req, res) => {
    Proxy Endpoint for Fingerprint Enrollment
 ===================== */
 
-// This endpoint is served over HTTPS (by Render) and proxies the request to your ESP.
-// It avoids mixed content errors.
 app.post('/proxy/enroll', async (req, res) => {
   // Allow CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   
   const role = req.query.role || "";
-  // Use your new ngrok URL that points to your local proxy server
-  const espEnrollUrl = `https://myespserver.loca.lt/enroll?role=${role}`;
+  // Replace with your ESP's IP address or tunnel URL
+  const espEnrollUrl = `https://e202-2401-4900-79df-f789-8c16-e1cf-5a4a-d1e2.ngrok-free.app/enroll?role=${role}`;
   try {
     const response = await fetch(espEnrollUrl, { method: "POST" });
     const data = await response.json();
@@ -355,7 +353,6 @@ app.post('/proxy/enroll', async (req, res) => {
     res.status(500).json({ success: false, message: "Proxy error: " + err.toString() });
   }
 });
-
 
 /* =====================
    NEW Endpoint: Record Enrollment Data from ESP
@@ -371,12 +368,26 @@ app.post('/record-enrollment', async (req, res) => {
 });
 
 /* =====================
-   Serve Static signup.html
+   Static File Serving
 ===================== */
-app.get('/', (req, res) => {
+
+// Serve signup.html
+app.get('/signup.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'signup.html'));
 });
-app.get('*', (req, res) => {
+
+// Serve login.html
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+// Serve dashboard.html
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
+// Default route: serve signup.html
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'signup.html'));
 });
 
