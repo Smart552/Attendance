@@ -1,23 +1,19 @@
+// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const PDFDocument = require('pdfkit');
-const app = express();
-const port = process.env.PORT || 3000; // Use Render's PORT environment variable
+const path = require('path');
 
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Middlewares
 app.use(express.json());
 app.use(cors());
 
-// Middleware to trim whitespace/newline characters from req.url
-app.use((req, res, next) => {
-  if (req.url) {
-    req.url = req.url.trim();
-  }
-  next();
-});
-
-// Connect to MongoDB Atlas using connection string from environment variable
-const mongoURI = process.env.MONGO_URI; // set this variable in Render dashboard
+// --- Connect to MongoDB Atlas ---
+const mongoURI = process.env.MONGO_URI;
 if (!mongoURI) {
   console.error("MongoDB URI not provided in environment variables");
   process.exit(1);
@@ -32,21 +28,21 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
 
 // User Schema
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
+  username: { type: String, required: true, unique: true }, // For students: roll no; for teachers: a unique identifier (name)
   name: { type: String, required: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['teacher', 'student'], default: 'student' },
   fingerprintId: { type: String, required: true },
-  subject: { type: String },
+  subject: { type: String },  // Teacher’s subject
   attendance: { type: String, default: 'absent' },
   lastUpdated: { type: Date },
   attendanceSessionOpen: { type: Boolean, default: false },
   sessionStart: { type: Date },
-  activeSessionId: { type: mongoose.Schema.Types.ObjectId }
+  activeSessionId: { type: mongoose.Schema.Types.ObjectId } // To store current session id
 });
 const User = mongoose.model('User', userSchema);
 
-// Session Schema
+// Session Schema – records a teacher’s complete session (from start to end)
 const sessionSchema = new mongoose.Schema({
   teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   sessionStart: { type: Date, required: true },
@@ -54,7 +50,7 @@ const sessionSchema = new mongoose.Schema({
 });
 const Session = mongoose.model('Session', sessionSchema);
 
-// Attendance Record Schema
+// Attendance Record Schema – logs each student’s attendance for a session
 const attendanceRecordSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   sessionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', required: true },
@@ -65,10 +61,12 @@ const AttendanceRecord = mongoose.model('AttendanceRecord', attendanceRecordSche
 /* =====================
    Global Variables
 ===================== */
+
+// Global counter for unique fingerprint IDs (if needed for enrollment)
 let nextFingerprintId = 1;
 
 /* =====================
-   Endpoints
+   API Endpoints
 ===================== */
 
 // Signup endpoint
@@ -124,7 +122,6 @@ app.post('/scan', async (req, res) => {
     
     if (user.role === "teacher") {
       const activeTeacher = await User.findOne({ role: "teacher", attendanceSessionOpen: true });
-      
       if (activeTeacher && activeTeacher._id.toString() !== user._id.toString()) {
         return res.status(403).json({ message: "Another teacher's session is active. You cannot start or end a session." });
       }
@@ -174,7 +171,7 @@ app.post('/scan', async (req, res) => {
   }
 });
 
-// Endpoint: Get teacher sessions count
+// Get teacher sessions count (total complete sessions)
 app.get('/teacher-sessions/:teacherId', async (req, res) => {
   const { teacherId } = req.params;
   const period = req.query.period || "daily";
@@ -201,7 +198,7 @@ app.get('/teacher-sessions/:teacherId', async (req, res) => {
   }
 });
 
-// Endpoint: Get student attendance data for teacher view
+// Get student attendance data for teacher view
 app.get('/student-attendance', async (req, res) => {
   const { subject, period } = req.query;
   const now = new Date();
@@ -230,7 +227,7 @@ app.get('/student-attendance', async (req, res) => {
   }
 });
 
-// Endpoint: Get student attendance data for individual student view
+// Get student attendance data for individual student view
 app.get('/student-attendance/:studentId', async (req, res) => {
   const { studentId } = req.params;
   const period = req.query.period || "daily";
@@ -334,7 +331,7 @@ app.get('/download-pdf/student/:studentId', async (req, res) => {
     doc.fontSize(16).text(`Period: ${period.charAt(0).toUpperCase() + period.slice(1)}`, { align: 'center' });
     doc.end();
     
-    // Reset attendance for the student.
+    // Reset individual student attendance.
     student.attendance = "absent";
     student.lastUpdated = new Date();
     student.save()
@@ -346,7 +343,7 @@ app.get('/download-pdf/student/:studentId', async (req, res) => {
   }
 });
 
-// Optional endpoint: Get all users
+// Optional endpoint: Get all users (for teacher dashboard)
 app.get('/users', async (req, res) => {
   try {
     const users = await User.find({});
@@ -435,6 +432,23 @@ app.get('/update-attendance', async (req, res) => {
   }
 });
 
+/* =====================
+   Serve Static index.html
+===================== */
+
+// When someone visits the root URL, send index.html (located in the same directory)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Fallback route: for any unmatched route, send index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// --------------------
+// Start Server
+// --------------------
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port} and listening on all interfaces`);
 });
