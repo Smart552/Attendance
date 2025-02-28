@@ -346,7 +346,8 @@ app.post('/proxy/enroll', async (req, res) => {
   
   const role = req.query.role || "";
   // Replace with your ESP's IP address.
-  const espEnrollUrl = `http://192.168.63.218/enroll?role=${role}`;
+  const espEnrollUrl = `https://1149-2401-4900-79df-f789-8c16-e1cf-5a4a-d1e2.ngrok-free.app/enroll?role=${role}`;
+
   try {
     const response = await fetch(espEnrollUrl, { method: "POST" });
     const data = await response.json();
