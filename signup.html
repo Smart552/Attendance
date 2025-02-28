@@ -76,7 +76,7 @@
 
     let fingerprintId = null;
 
-    // Updated enroll function to call the ESP32's enrollment endpoint.
+    // Updated enroll function now calls the proxy endpoint (served securely by your Render server)
     document.getElementById("registerFingerprint").addEventListener("click", async () => {
       try {
         const role = roleSelect.value;
@@ -84,8 +84,8 @@
           alert("Please select a role before registering fingerprint.");
           return;
         }
-        // Update the URL with your ESP's IP address and add the role parameter.
-        const enrollUrl = `http://192.168.63.218/enroll?role=${role}`;
+        // Call the secure proxy endpoint on your Render server.
+        const enrollUrl = `/proxy/enroll?role=${role}`;
         const response = await fetch(enrollUrl, { method: "POST" });
         const data = await response.json();
         if (data.success) {
