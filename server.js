@@ -349,12 +349,21 @@ app.post('/proxy/enroll', async (req, res) => {
   const espEnrollUrl = `https://d8faea6b733516a2bab11000e23acbc5.serveo.net/enroll?role=${role}`;
   try {
     const response = await fetch(espEnrollUrl, { method: "POST" });
-    const data = await response.json();
+    const text = await response.text();
+    console.log("Raw response from ESP endpoint:", text);
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (jsonErr) {
+      console.error("Failed to parse JSON:", jsonErr);
+      return res.status(500).json({ success: false, message: "Invalid JSON returned from ESP endpoint" });
+    }
     res.status(response.status).json(data);
   } catch (err) {
     res.status(500).json({ success: false, message: "Proxy error: " + err.toString() });
   }
 });
+
 
 /* =====================
    NEW Endpoint: Record Enrollment Data from ESP
