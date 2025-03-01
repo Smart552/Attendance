@@ -6,6 +6,10 @@ const PDFDocument = require('pdfkit');
 const path = require('path');
 const fetch = require('node-fetch'); // Make sure to install this package
 
+// Uncomment these lines if you want to run the Express server with HTTPS
+// const fs = require('fs');
+// const https = require('https');
+
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -343,7 +347,7 @@ app.post('/proxy/enroll', async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   
   const role = req.query.role || "";
-  // Use your localtunnel URL that you've reserved
+  // Use your localtunnel URL that you've reserved; note the HTTPS URL is used here.
   const espEnrollUrl = `https://myesp.loca.lt/enroll?role=${role}`;
   try {
     const response = await fetch(espEnrollUrl, { method: "POST" });
@@ -353,7 +357,6 @@ app.post('/proxy/enroll', async (req, res) => {
     res.status(500).json({ success: false, message: "Proxy error: " + err.toString() });
   }
 });
-
 
 /* =====================
    NEW Endpoint: Record Enrollment Data from ESP
@@ -395,6 +398,21 @@ app.get('/', (req, res) => {
 /* =====================
    Start Server
 ===================== */
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on port ${port} and listening on all interfaces`);
+
+// ----- Option 1: Start HTTP Server -----
+// app.listen(port, '0.0.0.0', () => {
+//   console.log(`Server running on port ${port} and listening on all interfaces`);
+// });
+
+// ----- Option 2: Start HTTPS Server -----
+// Uncomment the lines below after placing your certificate and key files in the correct paths.
+ 
+const httpsOptions = {
+  key: fs.readFileSync('path/to/your/key.pem'),
+  cert: fs.readFileSync('path/to/your/cert.pem')
+};
+
+https.createServer(httpsOptions, app).listen(port, '0.0.0.0', () => {
+  console.log(`HTTPS Server running on port ${port} and listening on all interfaces`);
 });
+
