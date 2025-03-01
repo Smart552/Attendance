@@ -345,8 +345,8 @@ app.post('/proxy/enroll', async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   
   const role = req.query.role || "";
-  // Use your localtunnel URL that you've reserved; note the HTTPS URL is used here.
- const espEnrollUrl = `https://myesp.loca.lt/enroll?role=${role}`;
+  // Use the localtunnel URL provided when you ran lt
+  const espEnrollUrl = `https://myesp.loca.lt/enroll?role=${role}`;
   try {
     const response = await fetch(espEnrollUrl, { method: "POST" });
     const data = await response.json();
@@ -355,6 +355,7 @@ app.post('/proxy/enroll', async (req, res) => {
     res.status(500).json({ success: false, message: "Proxy error: " + err.toString() });
   }
 });
+
 
 /* =====================
    NEW Endpoint: Record Enrollment Data from ESP
