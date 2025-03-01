@@ -6,9 +6,9 @@ const PDFDocument = require('pdfkit');
 const path = require('path');
 const fetch = require('node-fetch'); // Make sure to install this package
 
-// Uncomment these lines to run the Express server with HTTPS:
-const fs = require('fs');
-const https = require('https');
+// Uncomment the following if you ever need to run your server in HTTPS locally
+// const fs = require('fs');
+// const https = require('https');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -397,16 +397,18 @@ app.get('/', (req, res) => {
 ===================== */
 
 // ----- Option 1: Start HTTP Server -----
-// app.listen(port, '0.0.0.0', () => {
-//   console.log(`Server running on port ${port} and listening on all interfaces`);
-// });
+// Render typically handles SSL termination for you, so you can run an HTTP server:
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on port ${port} and listening on all interfaces`);
+});
 
 // ----- Option 2: Start HTTPS Server -----
-const httpsOptions = {
-  key: fs.readFileSync('path/to/your/key.pem'),
-  cert: fs.readFileSync('path/to/your/cert.pem')
-};
-
-https.createServer(httpsOptions, app).listen(port, '0.0.0.0', () => {
-  console.log(`HTTPS Server running on port ${port} and listening on all interfaces`);
-});
+// If you wish to run your server with HTTPS locally (or in an environment where SSL termination is not provided), 
+// uncomment the code below and update the file paths.
+// const httpsOptions = {
+//   key: fs.readFileSync('path/to/your/key.pem'),
+//   cert: fs.readFileSync('path/to/your/cert.pem')
+// };
+// https.createServer(httpsOptions, app).listen(port, '0.0.0.0', () => {
+//   console.log(`HTTPS Server running on port ${port} and listening on all interfaces`);
+// });
