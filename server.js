@@ -6,9 +6,9 @@ const PDFDocument = require('pdfkit');
 const path = require('path');
 const fetch = require('node-fetch'); // Make sure to install this package
 
-// Uncomment these lines if you want to run the Express server with HTTPS
-// const fs = require('fs');
-// const https = require('https');
+// Uncomment these lines to run the Express server with HTTPS:
+const fs = require('fs');
+const https = require('https');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -263,7 +263,6 @@ app.get('/student-attendance/:studentId', async (req, res) => {
 });
 
 // NEW endpoints for fingerprint-based queries
-
 app.get('/get-teacher-subject', async (req, res) => {
   let { fingerprintId } = req.query;
   fingerprintId = fingerprintId.toString();
@@ -341,7 +340,6 @@ app.get('/update-attendance', async (req, res) => {
 /* =====================
    Proxy Endpoint for Fingerprint Enrollment
 ===================== */
-
 app.post('/proxy/enroll', async (req, res) => {
   // Allow CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -374,7 +372,6 @@ app.post('/record-enrollment', async (req, res) => {
 /* =====================
    Static File Serving
 ===================== */
-
 // Serve signup.html
 app.get('/signup.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'signup.html'));
@@ -405,8 +402,6 @@ app.get('/', (req, res) => {
 // });
 
 // ----- Option 2: Start HTTPS Server -----
-// Uncomment the lines below after placing your certificate and key files in the correct paths.
- 
 const httpsOptions = {
   key: fs.readFileSync('path/to/your/key.pem'),
   cert: fs.readFileSync('path/to/your/cert.pem')
@@ -415,4 +410,3 @@ const httpsOptions = {
 https.createServer(httpsOptions, app).listen(port, '0.0.0.0', () => {
   console.log(`HTTPS Server running on port ${port} and listening on all interfaces`);
 });
-
